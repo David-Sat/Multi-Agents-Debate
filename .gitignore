@@ -1,0 +1,51 @@
+# .gitignore
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Logs
+logs
+*.log
+
+# Environment files
+.env
+.venv/
+env/
+venv/
+ENV/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# The directory PyCharm creates
+.idea/
+
+# key file with sensitive data
+keys.json
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Django files
+*.sqlite3
+*.db
+db.sqlite3
+
+# Flask files
+instance/
+.webassets-cache
+
+# Scrapy files
+.scrapy
+
+# Sphinx documentation
+docs/_build/

@@ -23,8 +23,11 @@ import random
 # random.seed(0)
 from code.utils.agent import Agent
 
+with open("keys.json") as json_data_file:
+    config = json.load(json_data_file)
 
-openai_api_key = "Your-OpenAI-Api-Key"
+openai_api_key = config["OPENAI_API_KEY"]
+
 
 NAME_LIST=[
     "Affirmative side",

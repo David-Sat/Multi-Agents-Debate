@@ -1,0 +1,18 @@
+{
+    "climatologist": {
+        "prompt": "As a climatologist, how would you suggest we approach the science of climate change in this strategy?",
+        "debate_prompt": "##oppo_ans##\nAs a climatologist, do you agree with the previous perspectives? Please provide your reasons and answer."
+    },
+    "economist": {
+        "prompt": "As an economist, what are the fiscal implications of this strategy?",
+        "debate_prompt": "##oppo_ans##\nAs an economist, do you agree with the previous perspectives? Please provide your reasons and answer."
+    },
+    "sociologist": {
+        "prompt": "As a sociologist, what societal impacts do you foresee with this strategy?",
+        "debate_prompt": "##oppo_ans##\nAs a sociologist, do you agree with the previous perspectives? Please provide your reasons and answer."
+    },
+    "politician": {
+        "prompt": "As a politician, what are the legislative possibilities and implications of this strategy?",
+        "debate_prompt": "##oppo_ans##\nAs a politician, do you agree with the previous perspectives? Please provide your reasons and answer."
+    }
+}

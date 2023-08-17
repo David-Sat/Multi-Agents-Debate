@@ -23,23 +23,17 @@ import random
 # random.seed(0)
 from code.utils.agent import Agent
 
-with open("keys.json") as json_data_file:
+with open("./code/configs/keys.json") as json_data_file:
     key_config = json.load(json_data_file)
 
 openai_api_key = key_config["OPENAI_API_KEY"]
 
 
-with open('config.json') as f:
+with open('./code/configs/config.json') as f:
     config = json.load(f)
 
 agents = config['agents']
 
-
-NAME_LIST=[
-    "Affirmative side",
-    "Negative side",
-    "Moderator",
-]
 
 class DebatePlayer(Agent):
     def __init__(self, model_name: str, name: str, temperature:float, openai_api_key: str, sleep_time: float) -> None:
@@ -58,7 +52,7 @@ class DebatePlayer(Agent):
 
 class Debate:
     def __init__(self,
-            model_name: str='gpt-3.5-turbo', 
+            model_name: str='gpt-4', 
             temperature: float=0, 
             num_players: int=3, 
             openai_api_key: str=None,
@@ -85,48 +79,55 @@ class Debate:
         self.max_round = max_round
         self.sleep_time = sleep_time
 
+        self.answers = []
+
         self.init_prompt()
 
         # creat&init agents
-        self.creat_agents()
+        self.create_agents()
         self.init_agents()
 
 
     def init_prompt(self):
         def prompt_replace(key):
-            self.config[key] = self.config[key].replace("##debate_topic##", self.config["debate_topic"])
+            self.config[key] = self.config['general_prompts'][key].replace("##debate_topic##", self.config["debate_topic"])
         prompt_replace("player_meta_prompt")
         prompt_replace("moderator_meta_prompt")
-        prompt_replace("affirmative_prompt")
         prompt_replace("judge_prompt_last2")
 
-    def creat_agents(self):
-        # creates players
-        self.players = [
-            DebatePlayer(model_name=self.model_name, name=name, temperature=self.temperature, openai_api_key=self.openai_api_key, sleep_time=self.sleep_time) for name in NAME_LIST
-        ]
-        self.affirmative = self.players[0]
-        self.negative = self.players[1]
-        self.moderator = self.players[2]
+
+    def create_agents(self):
+        self.agents = [DebatePlayer(model_name=self.model_name, name=name, temperature=self.temperature, openai_api_key=self.openai_api_key, sleep_time=self.sleep_time) for name in agents]
+
+        self.players = self.agents[:self.num_players]
+        self.moderator = self.agents[-1]
+
+        
 
     def init_agents(self):
         # start: set meta prompt
-        self.affirmative.set_meta_prompt(self.config['player_meta_prompt'])
-        self.negative.set_meta_prompt(self.config['player_meta_prompt'])
-        self.moderator.set_meta_prompt(self.config['moderator_meta_prompt'])
+        for player in self.players:
+            player.set_meta_prompt(self.config['general_prompts']['player_meta_prompt'].replace('##debate_topic##', self.config["debate_topic"]))
+
+        self.moderator.set_meta_prompt(self.config['general_prompts']['moderator_meta_prompt'])
+        
         
         # start: first round debate, state opinions
         print(f"===== Debate Round-1 =====\n")
-        self.affirmative.add_event(self.config['affirmative_prompt'])
-        self.aff_ans = self.affirmative.ask()
-        self.affirmative.add_memory(self.aff_ans)
-        self.config['base_answer'] = self.aff_ans
 
-        self.negative.add_event(self.config['negative_prompt'].replace('##aff_ans##', self.aff_ans))
-        self.neg_ans = self.negative.ask()
-        self.negative.add_memory(self.neg_ans)
+        for player in self.players:
+            if len(self.answers) > 0:
+                discussion_insert = self.config['discussion_insert'].replace('##answers##', '\n'.join(self.answers))
+            else:
+                discussion_insert = ""
+            player.add_event(self.config['participants'][player.name]['prompt'].replace('##discussion_insert##', discussion_insert))
+            answer = player.ask()
+            player.add_memory(answer)
+            self.config['base_answer'] = answer
+            self.answers.append(self.config['argument'].replace('##player##', player.name).replace('##answer##', answer))
 
-        self.moderator.add_event(self.config['moderator_prompt'].replace('##aff_ans##', self.aff_ans).replace('##neg_ans##', self.neg_ans).replace('##round##', 'first'))
+        
+        self.moderator.add_event(self.config['general_prompts']['moderator_prompt'].replace('##mod_info##', '\n'.join(self.answers[-(self.num_players-1):])).replace('##round##', 'first'))
         self.mod_ans = self.moderator.ask()
         self.moderator.add_memory(self.mod_ans)
         self.mod_ans = eval(self.mod_ans)
@@ -160,7 +161,7 @@ class Debate:
             player.add_event(msg)
 
     def speak(self, speaker: str, msg: str):
-        """The speaker broadcast a message to all other players. 
+        """The speaker broadcasts a message to all other players. 
 
         Args:
             speaker (str): name of the speaker
@@ -186,16 +187,19 @@ class Debate:
             if self.mod_ans["debate_answer"] != '':
                 break
             else:
+                self.answers.append("")
+
+
                 print(f"===== Debate Round-{round+2} =====\n")
-                self.affirmative.add_event(self.config['debate_prompt'].replace('##oppo_ans##', self.neg_ans))
-                self.aff_ans = self.affirmative.ask()
-                self.affirmative.add_memory(self.aff_ans)
 
-                self.negative.add_event(self.config['debate_prompt'].replace('##oppo_ans##', self.aff_ans))
-                self.neg_ans = self.negative.ask()
-                self.negative.add_memory(self.neg_ans)
+                for player in self.players:
+                    player.add_event(self.config['participants'][player.name]['debate_prompt'].replace('##prev_ans##', '\n'.join(self.answers[-(self.num_players-1):])))
+                    answer = player.ask()
+                    player.add_memory(answer)
+                    self.answers.append(self.config['argument'].replace('##player##', player.name).replace('##answer##', answer))
 
-                self.moderator.add_event(self.config['moderator_prompt'].replace('##aff_ans##', self.aff_ans).replace('##neg_ans##', self.neg_ans).replace('##round##', self.round_dct(round+2)))
+
+                self.moderator.add_event(self.config['general_prompts']['moderator_prompt'].replace('##mod_info##', '\n'.join(self.answers[-(self.num_players-1):])).replace('##round##', self.round_dct(round+2)))
                 self.mod_ans = self.moderator.ask()
                 self.moderator.add_memory(self.mod_ans)
                 self.mod_ans = eval(self.mod_ans)
@@ -206,14 +210,14 @@ class Debate:
 
         # ultimate deadly technique.
         else:
+            print("judge time")
             judge_player = DebatePlayer(model_name=self.model_name, name='Judge', temperature=self.temperature, openai_api_key=self.openai_api_key, sleep_time=self.sleep_time)
-            aff_ans = self.affirmative.memory_lst[2]['content']
-            neg_ans = self.negative.memory_lst[2]['content']
 
-            judge_player.set_meta_prompt(self.config['moderator_meta_prompt'])
+
+            judge_player.set_meta_prompt(self.config['general_prompts']['moderator_meta_prompt'].replace('##debate_topic##', self.config["debate_topic"]))
 
             # extract answer candidates
-            judge_player.add_event(self.config['judge_prompt_last1'].replace('##aff_ans##', aff_ans).replace('##neg_ans##', neg_ans))
+            judge_player.add_event(self.config['general_prompts']['judge_prompt_last1'].replace('##mod_info##', '\n'.join(self.answers[-(self.num_players-1):])))
             ans = judge_player.ask()
             judge_player.add_memory(ans)
 
@@ -242,7 +246,7 @@ if __name__ == "__main__":
         while debate_topic == "":
             debate_topic = input(f"\nEnter your debate topic: ")
             
-        config = json.load(open(f"{MAD_path}/code/utils/config4all.json", "r"))
+        config = json.load(open(f"./code/configs/config.json", "r"))
         config['debate_topic'] = debate_topic
 
         debate = Debate(num_players=3, openai_api_key=openai_api_key, config=config, temperature=0, sleep_time=0)

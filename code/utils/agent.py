@@ -95,6 +95,9 @@ class Agent:
         """
         # query
         num_context_token = sum([num_tokens_from_string(m["content"], self.model_name) for m in self.memory_lst])
+        print(num_context_token)
+        print(f"----- MEMORY -----")
+        print(self.memory_lst)
         max_token = model2max_context[self.model_name] - num_context_token
         return self.query(self.memory_lst, max_token, api_key=self.openai_api_key, temperature=temperature if temperature else self.temperature)
 

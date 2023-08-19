@@ -1,12 +1,13 @@
 import openai
 import backoff
 import time
+import json
 import random
 from openai.error import RateLimitError, APIError, ServiceUnavailableError, APIConnectionError
 from .openai_utils import OutOfQuotaException, AccessTerminatedException
 from .openai_utils import num_tokens_from_string, model2max_context
 
-support_models = ['gpt-3.5-turbo', 'gpt-3.5-turbo-0301', 'gpt-4', 'gpt-4-0314']
+support_models = ['gpt-3.5-turbo', 'gpt-3.5-turbo-16k', 'gpt-4', 'gpt-4-32k']
 
 class Agent:
     def __init__(self, model_name: str, name: str, temperature: float, sleep_time: float=0) -> None:
@@ -23,9 +24,11 @@ class Agent:
         self.temperature = temperature
         self.memory_lst = []
         self.sleep_time = sleep_time
+        self.base_prompt = ""
+        self.base_debate_prompt = ""
 
     @backoff.on_exception(backoff.expo, (RateLimitError, APIError, ServiceUnavailableError, APIConnectionError), max_tries=20)
-    def query(self, messages: "list[dict]", max_tokens: int, api_key: str, temperature: float) -> str:
+    def query(self, messages: "list[dict]", max_tokens: int, api_key: str, temperature: float, functions: list = None) -> str:
         """make a query
 
         Args:
@@ -51,6 +54,7 @@ class Agent:
                     temperature=temperature,
                     max_tokens=max_tokens,
                     api_key=api_key,
+                    functions=functions
                 )
                 gen = response['choices'][0]['message']['content']
             return gen
@@ -101,3 +105,45 @@ class Agent:
         max_token = model2max_context[self.model_name] - num_context_token
         return self.query(self.memory_lst, max_token, api_key=self.openai_api_key, temperature=temperature if temperature else self.temperature)
 
+
+    def construct_prompts(self, temperature: float=None) -> dict:
+        """Query for structured expert prompts based on a given debate topic and the number of expert perspectives required
+
+        Args:
+            debate_topic (str): The topic for debate
+            num_players (int): Number of expert perspectives required
+            temperature (float, optional): Sampling temperature. Defaults to None.
+
+        Returns:
+            dict: The constructed prompts in the desired structured format
+        """
+
+        function_structure = [{
+            "name": "construct_expert_prompts",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "experts": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "field": {"type": "string"},
+                                "prompt": {"type": "string"},
+                                "debate_prompt": {"type": "string"}
+                            }
+                        }
+                    }
+                }
+            }
+        }]
+
+        num_context_token = sum([num_tokens_from_string(m["content"], self.model_name) for m in self.memory_lst])
+        max_token = model2max_context[self.model_name] - num_context_token
+        raw_response = self.query(self.memory_lst, max_token, api_key=self.openai_api_key, temperature=temperature if temperature else self.temperature, functions=function_structure)
+        try:
+            expert_prompts = json.loads(raw_response)
+            return expert_prompts
+        except Exception as e:
+            print(f"Failed to parse structured response: {e}")
+            return None

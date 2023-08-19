@@ -52,7 +52,7 @@ class DebatePlayer(Agent):
 
 class Debate:
     def __init__(self,
-            model_name: str='gpt-4', 
+            model_name: str='gpt-3.5-turbo-16k', 
             temperature: float=0, 
             num_players: int=3, 
             openai_api_key: str=None,
@@ -100,11 +100,35 @@ class Debate:
         self.agents = [DebatePlayer(model_name=self.model_name, name=name, temperature=self.temperature, openai_api_key=self.openai_api_key, sleep_time=self.sleep_time) for name in agents]
 
         self.players = self.agents[:self.num_players]
-        self.moderator = self.agents[-1]
+        self.moderator = self.agents[-1]  
+    
+    
+    def generate_expert_prompts(self):
+        creator_player = DebatePlayer(model_name='gpt-4', name='Creator', temperature=self.temperature, openai_api_key=self.openai_api_key, sleep_time=self.sleep_time)
 
+        creator_player.set_meta_prompt(self.config['general_prompts']['creator_meta_prompt'].replace('##debate_topic##', self.config["debate_topic"]))
+        creator_player.set_meta_prompt(
+            self.config['general_prompts']['creator_prompt']
+            .replace('##debate_topic##', self.config["debate_topic"])
+            .replace('##num_players##', str(self.num_players))
+        )
+
+        creator_player.add_event(self.config['general_prompts']['creator_prompt']
+            .replace('##debate_topic##', self.config["debate_topic"])
+            .replace('##num_players##', str(self.num_players))
+            )
+        ans = creator_player.construct_prompts()
+        creator_player.add_memory(ans)
         
+        ans = eval(ans)
+        print(ans)
+
 
     def init_agents(self):
+
+        # call generate_expert_prompts function
+        self.generate_expert_prompts()
+
         # start: set meta prompt
         for player in self.players:
             player.set_meta_prompt(self.config['general_prompts']['player_meta_prompt'].replace('##debate_topic##', self.config["debate_topic"]))

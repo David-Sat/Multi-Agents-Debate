@@ -2,8 +2,10 @@ import tiktoken
 
 
 model2max_context = {
+    "gpt-4-32k": 32500,
     "gpt-4": 7900,
     "gpt-4-0314": 7900,
+    "gpt-3.5-turbo-16k": 16100,
     "gpt-3.5-turbo-0301": 3900,
     "gpt-3.5-turbo": 3900,
     "text-davinci-003": 4096,

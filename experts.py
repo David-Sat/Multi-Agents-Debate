@@ -32,7 +32,6 @@ openai_api_key = key_config["OPENAI_API_KEY"]
 with open('./code/configs/config.json') as f:
     config = json.load(f)
 
-agents = config['agents']
 
 
 class DebatePlayer(Agent):
@@ -80,6 +79,7 @@ class Debate:
         self.sleep_time = sleep_time
 
         self.answers = []
+        self.expert_prompts = []
 
         self.init_prompt()
 
@@ -94,10 +94,13 @@ class Debate:
         prompt_replace("player_meta_prompt")
         prompt_replace("moderator_meta_prompt")
         prompt_replace("judge_prompt_last2")
+        self.expert_prompts = self.generate_expert_prompts().get('experts', [])
 
 
     def create_agents(self):
-        self.agents = [DebatePlayer(model_name=self.model_name, name=name, temperature=self.temperature, openai_api_key=self.openai_api_key, sleep_time=self.sleep_time) for name in agents]
+        expert_names = [expert['field'] for expert in self.expert_prompts]
+        expert_names.append('Moderator')
+        self.agents = [DebatePlayer(model_name=self.model_name, name=name, temperature=self.temperature, openai_api_key=self.openai_api_key, sleep_time=self.sleep_time) for name in expert_names]
 
         self.players = self.agents[:self.num_players]
         self.moderator = self.agents[-1]  
@@ -120,18 +123,21 @@ class Debate:
         ans = creator_player.construct_prompts()
         creator_player.add_memory(ans)
         
-        ans = eval(ans)
+        #ans = eval(ans)
         print(ans)
+        return ans
 
 
     def init_agents(self):
 
-        # call generate_expert_prompts function
-        self.generate_expert_prompts()
+        expert_prompts_list = self.expert_prompts
 
-        # start: set meta prompt
-        for player in self.players:
-            player.set_meta_prompt(self.config['general_prompts']['player_meta_prompt'].replace('##debate_topic##', self.config["debate_topic"]))
+        for idx, player in enumerate(self.players):
+            if idx < len(expert_prompts_list):
+                prompt_data = expert_prompts_list[idx]
+
+                player.set_meta_prompt(prompt_data['prompt'])
+                player.set_base_debate_prompt(prompt_data['debate_prompt'])
 
         self.moderator.set_meta_prompt(self.config['general_prompts']['moderator_meta_prompt'])
         
@@ -140,18 +146,13 @@ class Debate:
         print(f"===== Debate Round-1 =====\n")
 
         for player in self.players:
-            if len(self.answers) > 0:
-                discussion_insert = self.config['discussion_insert'].replace('##answers##', '\n'.join(self.answers))
-            else:
-                discussion_insert = ""
-            player.add_event(self.config['participants'][player.name]['prompt'].replace('##discussion_insert##', discussion_insert))
             answer = player.ask()
             player.add_memory(answer)
             self.config['base_answer'] = answer
             self.answers.append(self.config['argument'].replace('##player##', player.name).replace('##answer##', answer))
 
         
-        self.moderator.add_event(self.config['general_prompts']['moderator_prompt'].replace('##mod_info##', '\n'.join(self.answers[-(self.num_players-1):])).replace('##round##', 'first'))
+        self.moderator.add_event(self.config['general_prompts']['moderator_prompt'].replace('##mod_info##', '\n'.join(self.answers[-(self.num_players):])).replace('##round##', 'first'))
         self.mod_ans = self.moderator.ask()
         self.moderator.add_memory(self.mod_ans)
         self.mod_ans = eval(self.mod_ans)
@@ -166,12 +167,12 @@ class Debate:
         print("\n\n===== Debate Done! =====")
         print("\n----- Debate Topic -----")
         print(self.config["debate_topic"])
-        print("\n----- Base Answer -----")
-        print(self.config["base_answer"])
+        print("\n----- Debate Summary -----")
+        print(self.config["summary"])
         print("\n----- Debate Answer -----")
         print(self.config["debate_answer"])
         print("\n----- Debate Reason -----")
-        print(self.config["Reason"])
+        print(self.config["reasons"])
 
     def broadcast(self, msg: str):
         """Broadcast a message to all players. 
@@ -217,13 +218,13 @@ class Debate:
                 print(f"===== Debate Round-{round+2} =====\n")
 
                 for player in self.players:
-                    player.add_event(self.config['participants'][player.name]['debate_prompt'].replace('##prev_ans##', '\n'.join(self.answers[-(self.num_players-1):])))
+                    player.add_debate_prompt('\n'.join(self.answers[-(self.num_players-1):]))
                     answer = player.ask()
                     player.add_memory(answer)
                     self.answers.append(self.config['argument'].replace('##player##', player.name).replace('##answer##', answer))
 
 
-                self.moderator.add_event(self.config['general_prompts']['moderator_prompt'].replace('##mod_info##', '\n'.join(self.answers[-(self.num_players-1):])).replace('##round##', self.round_dct(round+2)))
+                self.moderator.add_event(self.config['general_prompts']['moderator_prompt'].replace('##mod_info##', '\n'.join(self.answers[-(self.num_players):])).replace('##round##', self.round_dct(round+2)))
                 self.mod_ans = self.moderator.ask()
                 self.moderator.add_memory(self.mod_ans)
                 self.mod_ans = eval(self.mod_ans)
@@ -241,7 +242,9 @@ class Debate:
             judge_player.set_meta_prompt(self.config['general_prompts']['moderator_meta_prompt'].replace('##debate_topic##', self.config["debate_topic"]))
 
             # extract answer candidates
-            judge_player.add_event(self.config['general_prompts']['judge_prompt_last1'].replace('##mod_info##', '\n'.join(self.answers[-(self.num_players-1):])))
+            print("extract answer candidates")
+            print(self.config['general_prompts']['judge_prompt_last1'].replace('##mod_info##', '\n'.join(self.answers[-(self.num_players):])))
+            judge_player.add_event(self.config['general_prompts']['judge_prompt_last1'].replace('##mod_info##', '\n'.join(self.answers[-(self.num_players):])))
             ans = judge_player.ask()
             judge_player.add_memory(ans)
 
@@ -273,6 +276,6 @@ if __name__ == "__main__":
         config = json.load(open(f"./code/configs/config.json", "r"))
         config['debate_topic'] = debate_topic
 
-        debate = Debate(num_players=3, openai_api_key=openai_api_key, config=config, temperature=0, sleep_time=0)
+        debate = Debate(num_players=4, openai_api_key=openai_api_key, config=config, temperature=0, sleep_time=0)
         debate.run()
 

@@ -24,7 +24,6 @@ class Agent:
         self.temperature = temperature
         self.memory_lst = []
         self.sleep_time = sleep_time
-        self.base_prompt = ""
         self.base_debate_prompt = ""
 
     @backoff.on_exception(backoff.expo, (RateLimitError, APIError, ServiceUnavailableError, APIConnectionError), max_tries=20)
@@ -48,14 +47,19 @@ class Agent:
         assert self.model_name in support_models, f"Not support {self.model_name}. Choices: {support_models}"
         try:
             if self.model_name in support_models:
-                response = openai.ChatCompletion.create(
-                    model=self.model_name,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    api_key=api_key,
-                    functions=functions
-                )
+                request_payload = {
+                    "model": self.model_name,
+                    "messages": messages,
+                    "temperature": temperature,
+                    "max_tokens": max_tokens,
+                    "api_key": api_key
+                }
+
+                # Conditionally add functions to the payload if it's not None
+                if functions is not None:
+                    request_payload["functions"] = functions
+
+                response = openai.ChatCompletion.create(**request_payload)
                 gen = response['choices'][0]['message']['content']
             return gen
 
@@ -67,13 +71,31 @@ class Agent:
             else:
                 raise e
 
+    def set_base_debate_prompt(self, base_debate_prompt: str):
+        """Set the base debate prompt
+
+        Args:
+            base_debate_prompt (str): the base debate prompt
+        """
+        self.base_debate_prompt = base_debate_prompt
+
     def set_meta_prompt(self, meta_prompt: str):
         """Set the meta_prompt
 
         Args:
             meta_prompt (str): the meta prompt
         """
+        print(f"----- {self.name} -----\n{meta_prompt}\n")
         self.memory_lst.append({"role": "system", "content": f"{meta_prompt}"})
+
+    def add_debate_prompt(self, prev_ans: str):
+        """Set the debate prompt
+
+        Args:
+            debate_prompt (str): the debate prompt
+        """
+        debate_prompt = self.base_debate_prompt.replace("##prev_ans##", prev_ans)
+        self.memory_lst.append({"role": "system", "content": f"{debate_prompt}"})
 
     def add_event(self, event: str):
         """Add an new event in the memory
@@ -99,9 +121,7 @@ class Agent:
         """
         # query
         num_context_token = sum([num_tokens_from_string(m["content"], self.model_name) for m in self.memory_lst])
-        print(num_context_token)
-        print(f"----- MEMORY -----")
-        print(self.memory_lst)
+        print("Token: ", num_context_token)
         max_token = model2max_context[self.model_name] - num_context_token
         return self.query(self.memory_lst, max_token, api_key=self.openai_api_key, temperature=temperature if temperature else self.temperature)
 

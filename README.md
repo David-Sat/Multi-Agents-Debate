@@ -1,28 +1,36 @@
-# LLM Think Tank: Pooling AI Expertise for Multi-Perspective Insights
+# ThinkTankGPT: A Collaborative AI Framework for Nuanced, Multi-Expert Discourse
+ThinkTankGPT elevates the scope of AI dialogues by orchestrating a dynamic discourse among specialized LLM. A collaborative framework at its core, ThinkTankGPT offers an enriched, nuanced discussion on user-defined topics by automatically assembling a virtual panel of experts and  simulating a panel discussion among them. This project draws its inspiration from the Multi-Agent Debate (MAD) framework, pushing it further to create a debate between LLMs that remember previous arguments and responses to ensure a non-repetitive, deeply interrelated discourse.
 
-Leveraging the power of collaboration, a main LLM instance consults a 'Think Tank' of specialized LLMs, each bringing unique domain-specific expertise to the table. This approach enriches the primary LLM's problem-solving ability while managing token limitations effectively. The project builds upon the original [MAD framework](https://github.com/Skytliang/Multi-Agents-Debate), utilizing its concept of multi-agent debate to create a more informed, diverse, and efficient dialog system.
+## Why ThinkTankGPT?
+While existing Large Language Models (LLMs) often provide a single, unified perspective, this approach has its limitations. For example, relying on more advanced and costly models can yield good results, but it's not a foolproof method. As pointed out by the creators of the Multi-Agent Debate (MAD) framework, LLMs can sometimes fall into a "Degeneration-of-Thought" trap. In this scenario, once the model forms a strong opinion, it finds it difficult to generate new, alternative insights or correct itself if its initial stance is proven wrong.
 
-## Specialized Multi-Agent Debate
-The LLM Think Tank is a proposed solution to enhance the breadth and depth of knowledge covered by a single Large Language Model (LLM). It aims to address gaps in the LLM's ability to remain current with developments across diverse research fields.
+The MAD framework proposed an innovative workaround: have two LLMs with opposing viewpoints engage in a structured debate. This approach yielded richer, more nuanced outputs than even the most advanced single LLM could offer. ThinkTankGPT takes this idea a step further. Instead of a binary debate, it simulates a panel of rivaling experts by prompting a single LLM to adopt multiple personas. This creates a dynamic and multi-faceted discussion, offering more nuanced and comprehensive insights on complex topics.
 
-A range of specialized LLMs, each trained in a specific field or task, constitute the Think Tank. This modular design allows for the continual integration of the latest relevant data, enhancing the contributions of each LLM.
+### Key Features of ThinkTankGPT
+1. **Persona-Prompting:** Utilizes a single LLM but simulates a variety of domain-specific expert-generated prompts.
+2. **Dynamic Memory:** Experts remember previous dialogues to avoid repetitiveness and increase the interrelatedness of ongoing discussions.
+3. **Nuanced Conversations:** Simulates a  diverse panel of experts.
+4. **User-Defined Topics:** Highly adaptable to various user-defined subjects.
 
-Based on the discussion mechanism developed by the Team behind the MAD framework, the Think Tank operates by enabling discourse among specialized LLMs. Every LLM injects its domain-specific expertise into the discussion, culminating in a comprehensive, multi-perspective output.
+### Benefits
+1. **Prompt-Engineered Accuracy:** Improved results through persona-specific prompts.
+2. **Comprehensive Viewpoints:** Encourages a more balanced and nuanced discussion by simulating multiple experts.
+3. **Dynamic Adaptability:** The expert panel is automatically customized to fit the topic of discussion.
+4. **Token Efficiency:** Summarized, focused outputs for better management of token limitations.
 
-The LLM Think Tank offers numerous benefits, including up-to-date information, efficient token use in the main LLM, and the incorporation of diverse viewpoints. In essence, it transforms the single LLM from a stand-alone knowledge source to a cooperative network of AI specialists.
+## Future Work
+The integration of specialized LLMs for domain-specific expertise remains a long-term goal for ThinkTankGPT. Planned enhancements include:
 
-The LLM Think Tank is an extension of the [Multi-Agent Debate (MAD) framework](https://github.com/Skytliang/Multi-Agents-Debate), originally proposed to tackle the Degeneration-of-Thought problem in Large Language Models (LLMs). 
+- Utilizing pre-trained LLMs with domain knowledge for improved expertise.
+- Further improvements in token efficiency.
+- Continuous updates to keep the LLM current with real-time information.
+- Overarching service framework that incorporates specialized LLMs provided by different institutions, including automatic payment. 
+## Examples
+I'll add a wide range of discussions here soon.
 
-### Benefits of the LLM Think Tank
-1. **Current Information:** Constant integration of the latest relevant data through specialized LLMs.
-2. **Efficient Token Use:** Reduced token usage in the main LLM due to summarized input from the Think Tank.
-3. **Diverse Viewpoints:** Incorporation of diverse perspectives from multiple fields for a more comprehensive understanding.
-4. **Domain-Specific Expertise:** Contributions from LLMs trained in specific fields enhance the quality of discussions.
-5. **Cooperative Network:** Transformation of a single LLM from a stand-alone source to a collaborative network, resulting in enriched outputs.
-6. **Dynamic Discussion Panel:** Members of the Think Tank change according to the discussed topic
+## Credits
 
-### Use Cases for the LLM Think Tank
-1. **Developing a Comprehensive Climate Change Strategy:** This topic would require input from climatologists to understand the scientific factors, economists to discuss the fiscal implications, sociologists to predict societal impacts, and politicians to understand legislative possibilities.
-2. **Designing a Smart City:** Urban planners, computer scientists, environmental scientists, sociologists, and representatives from the local population would all have important insights to contribute. Discussions could cover everything from IoT implementation to the socioeconomic impacts of urban green spaces.
-3. **Mitigating Biodiversity Loss and Ecosystem Degradation:** The Think Tank enables an interdisciplinary discourse involving ecologists, conservation biologists, economists, political scientists, and sociologists, ensuring holistic solutions to biodiversity loss.
-4. **Evolving Education for the 21st Century:** Educators, psychologists, technology experts, and policymakers would all have valuable insights to contribute to how education can evolve to meet the needs of today's society.
+ThinkTankGPT builds upon the innovative concept of the MAD framework, which was designed to tackle the Degeneration-of-Thought issue in LLMs. For more details, please visit the [MAD GitHub Repository](https://github.com/Skytliang/Multi-Agents-Debate).
+
+
+Feel free to contribute and be part of this exciting evolution in AI-powered discussions!

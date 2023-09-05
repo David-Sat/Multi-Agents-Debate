@@ -80,6 +80,7 @@ class Debate:
 
         self.answers = []
         self.expert_prompts = []
+        self.arguments = {}
 
         self.init_prompt()
 
@@ -131,17 +132,18 @@ class Debate:
     def init_agents(self):
 
         expert_prompts_list = self.expert_prompts
+        round_arguments = {}
 
         for idx, player in enumerate(self.players):
             if idx < len(expert_prompts_list):
                 prompt_data = expert_prompts_list[idx]
-
+                player.set_meta_prompt(self.config['player_meta_prompt'])
                 player.set_meta_prompt(prompt_data['prompt'])
                 player.set_base_debate_prompt(prompt_data['debate_prompt'])
 
-        self.moderator.set_meta_prompt(self.config['general_prompts']['moderator_meta_prompt'])
+        self.moderator.set_meta_prompt(self.config['moderator_meta_prompt'])
         
-        
+        #print(json.dumps(self.config, indent=4))
         # start: first round debate, state opinions
         print(f"===== Debate Round-1 =====\n")
 
@@ -150,12 +152,14 @@ class Debate:
             player.add_memory(answer)
             self.config['base_answer'] = answer
             self.answers.append(self.config['argument'].replace('##player##', player.name).replace('##answer##', answer))
+            round_arguments[player.name] = answer
 
         
         self.moderator.add_event(self.config['general_prompts']['moderator_prompt'].replace('##mod_info##', '\n'.join(self.answers[-(self.num_players):])).replace('##round##', 'first'))
         self.mod_ans = self.moderator.ask()
         self.moderator.add_memory(self.mod_ans)
         self.mod_ans = eval(self.mod_ans)
+        self.arguments["Round-1"] = round_arguments
 
     def round_dct(self, num: int):
         dct = {
@@ -216,18 +220,23 @@ class Debate:
 
 
                 print(f"===== Debate Round-{round+2} =====\n")
+                round_arguments = {}
+
 
                 for player in self.players:
                     player.add_debate_prompt('\n'.join(self.answers[-(self.num_players-1):]))
                     answer = player.ask()
                     player.add_memory(answer)
                     self.answers.append(self.config['argument'].replace('##player##', player.name).replace('##answer##', answer))
+                    round_arguments[player.name] = answer
 
 
                 self.moderator.add_event(self.config['general_prompts']['moderator_prompt'].replace('##mod_info##', '\n'.join(self.answers[-(self.num_players):])).replace('##round##', self.round_dct(round+2)))
                 self.mod_ans = self.moderator.ask()
                 self.moderator.add_memory(self.mod_ans)
                 self.mod_ans = eval(self.mod_ans)
+            
+            self.arguments["Round-" + str(round+2)] = round_arguments
 
         if self.mod_ans["debate_answer"] != '':
             self.config.update(self.mod_ans)
@@ -261,6 +270,7 @@ class Debate:
             self.players.append(judge_player)
 
         self.print_answer()
+        print(json.dumps(self.arguments, indent=4))
 
 
 if __name__ == "__main__":
